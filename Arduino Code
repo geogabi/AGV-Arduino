@@ -1,0 +1,184 @@
+#include <SoftwareSerial.h>
+#include <NewPing.h>
+
+const int trigPin = 13, trigPin2 = 3;
+const int echoPin = 12, echoPin2 = 2;
+long duration,duration2;
+int distanceCm, distanceCm2;
+
+int senzor_0 = A0;
+int senzor_1 = A1;
+int senzor_2 = A2;
+int trecere = 0;
+
+int info = 0;
+int state = 0;
+int directie = 0, directie2 = 0;
+
+int ena = 5;
+int in1 = 6;
+int in2 = 7;
+int in3 = 8;
+int in4 = 9;
+int enb = 10;
+
+void setup() {
+  pinMode(ena, OUTPUT);
+  pinMode(in1, OUTPUT);
+  pinMode(in2, OUTPUT);
+  pinMode(enb, OUTPUT);
+  pinMode(in3, OUTPUT);
+  pinMode(in4, OUTPUT);
+
+  pinMode(senzor_0,INPUT);
+  pinMode(senzor_1,INPUT);
+  pinMode(senzor_2,INPUT);
+
+  pinMode(trigPin, OUTPUT);
+  pinMode(echoPin, INPUT);
+
+  pinMode(trigPin2, OUTPUT);
+  pinMode(echoPin2, INPUT);
+
+  Serial.begin(9600); 
+
+  digitalWrite(in1,LOW);
+  digitalWrite(in2,LOW);
+  digitalWrite(in3,LOW);
+  digitalWrite(in4,LOW);
+}
+
+void loop(){
+  bluethooth();
+  senzor1();
+}
+
+void bluethooth(){
+  if(Serial.available() > 0){
+    info = Serial.read();
+    state = 0;
+} 
+  if (info == '1'){
+    start();
+    IR();
+    if (state == 0){
+      Serial.println("on");
+      state = 1;
+      directie = 1;
+}}
+  else if (info == '0'){
+    stop();
+    if (state == 0){
+      Serial.println("off");
+      state = 1;
+}}
+  else if (info == '2'){
+    spate();
+    directie = 0;
+    senzor1();
+    int st = digitalRead(senzor_0);
+    if (st==0 && directie==0){
+      Serial.println("Este in garaj");
+      // delay(1000);
+      stop();
+  }}}
+
+void senzor1(){
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+  duration = pulseIn(echoPin, HIGH);
+  distanceCm = duration * 0.0340 / 2;
+  if(distanceCm < 10 && directie == 1)
+  {
+    stop();
+    Serial.print("Pericol la: ");
+    Serial.println(distanceCm);
+    Serial.println(" cm");
+  }
+  delayMicroseconds(2);
+
+  digitalWrite(trigPin2, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin2, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin2, LOW);
+  duration2 = pulseIn(echoPin2, HIGH);
+  distanceCm2 = duration2 * 0.0340 / 2;
+  if(distanceCm2 < 10 && directie != 1){
+    stop();
+    Serial.print("Pericol la: ");
+    Serial.println(distanceCm2);
+    Serial.println(" cm");
+}}
+
+void IR(){
+  int status0 = digitalRead(senzor_0);
+  int status1 = digitalRead(senzor_1);
+  int status2 = digitalRead(senzor_2);
+  if (status0 == 0 && trecere == 0){
+    Serial.println("A plecat din garaj");
+    fata();
+    trecere += 1;
+}
+  if (trecere==1){
+    fata();      
+}
+if (status1==0 && trecere==1){
+    Serial.println("A ajuns la primul senzor");
+    stop();
+    delay(5000);
+    trecere+=1;
+}
+  if (trecere==2){
+    fata();
+}
+  if (status2==0 && trecere == 2){
+    Serial.println("A ajuns la al doilea senzor");
+    stop();
+    delay(5000);
+    trecere+=1;
+}
+  if (trecere ==3){
+    spate();
+}
+  if (status0==0 && trecere==3){
+    Serial.println("Este in garaj");
+    stop(); }
+}
+
+void fata(){
+  digitalWrite(in1,LOW);
+  digitalWrite(in2,HIGH);
+  analogWrite(ena, 130);
+  digitalWrite(in3,LOW);
+  digitalWrite(in4,HIGH);
+  analogWrite(enb, 130);
+}
+
+void spate(){
+  digitalWrite(in1,HIGH);
+  digitalWrite(in2,LOW);
+  analogWrite(ena, 130);
+  digitalWrite(in3,HIGH);
+  digitalWrite(in4,LOW);
+  analogWrite(enb, 130);
+}
+
+void stop(){
+  digitalWrite(in1,LOW);
+  digitalWrite(in2,LOW);
+  digitalWrite(ena,0);
+  digitalWrite(in3,LOW);
+  digitalWrite(in4,LOW);
+  digitalWrite(enb,0);
+}
+
+void start(){
+  digitalWrite(in1,HIGH);
+  digitalWrite(in2,HIGH);
+  digitalWrite(in3,HIGH);
+  digitalWrite(in4,HIGH);
+}
